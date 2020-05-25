@@ -6,20 +6,22 @@ from torchvision import models,transforms
 from PIL import Image
 
 parser = argparse.ArgumentParser(description= "Predict.py")
-parser.add_argument('img_dir', nargs='*', action='store')
-parser.add_argument('--checkpoint_dir', nargs='*', action='store')
-parser.add_argument('--topK', nargs='*', action='store', default=1, type=int, dest='topK')
-parser.add_argument('--category_name', nargs='*', action='store', default='./cat_to_name.json', dest='category_names')
+parser.add_argument('img_dir', action='store')
+parser.add_argument('checkpoint_dir', action='store')
+parser.add_argument('--topK', action='store', default=1, type=int, dest='topK')
+parser.add_argument('--category_name', action='store', default='./cat_to_name.json', dest='category_names')
 parser.add_argument('--gpu', action='store_true', default=False, dest='gpu')
 args = parser.parse_args()
 
 with open('cat_to_name.json', 'r') as f:
     cat_to_name = json.load(f)
 
-checkpoint = torch.load(args.checkpoint_dir[0])
+checkpoint = torch.load(args.checkpoint_dir)
 
 arch = getattr(models,checkpoint['model'])
 model = arch(pretrained=True)
+for params in model.parameters():
+    params.require_grad = False
 
 classifier = model.classifier
 input_features = classifier.in_features
@@ -34,7 +36,7 @@ model.classifier = classifier
 model.class_to_idx = checkpoint['class_to_idx']
 model.load_state_dict(checkpoint['state_dict'])
 
-image = Image.open(args.img_dir[0])
+image = Image.open(args.img_dir)
 transformation = transforms.Compose([transforms.Resize(256),
                                      transforms.CenterCrop(224),
                                      transforms.ToTensor(),
@@ -49,7 +51,7 @@ if args.gpu:
 
 output = model(img)
 predict = torch.exp(output)
-top_values, top_class = predict.topk(args.topK , dim = 1)
+top_values, top_class = predict.topk(args.topK, dim = 1)
 top_values, top_class = top_values.cpu(), top_class.cpu()
 top_class = top_class.detach().numpy().tolist()[0]
 top_class = [cat_to_name[idx_to_class[species]] for species in top_class]

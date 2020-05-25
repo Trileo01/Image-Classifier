@@ -5,16 +5,13 @@ from torchvision import datasets, transforms, models
 from workspace_utils import active_session
 
 parser = argparse.ArgumentParser(description="Train.py")
-parser.add_argument('data_dir', nargs='*', action='store', default='./flowers')
-parser.add_argument('--save_dir', nargs='*', action='store', default='./', dest = 'dir')
-parser.add_argument('--arch', nargs='*', action='store',
-                    default='densenet121', dest='model')
-parser.add_argument('--learning rate', nargs='*',
-                    action='store', default=0.001, type=int, dest='lr')
-parser.add_argument('--hidden units', nargs='*',
-                    action='store', default=768, type=int, dest='hidden')
-parser.add_argument('--epochs', nargs='*', action='store',
-                    default=8, type=int, dest='epochs')
+parser.add_argument('data_dir', action='store', default='./flowers')
+parser.add_argument('--save_dir', action='store', default='./', dest = 'dir')
+parser.add_argument('--arch',action='store', default='densenet121', dest='model')                    
+parser.add_argument('--learning rate', action='store', default=0.001, type=int, dest='lr')
+parser.add_argument('--hidden units', action='store', default=768, type=int, dest='hidden')
+parser.add_argument('--epochs', type=int, action='store',
+                    default=8, dest='epochs')
 parser.add_argument('--gpu', action='store_true', default=False, dest='gpu')
 args = parser.parse_args()
 
@@ -117,4 +114,36 @@ checkpoint = {'model' : args.model,
 checkpoint_dir = args.dir + '/checkpoint.pth'
 torch.save(checkpoint, checkpoint_dir)
 
+# checkpoint = torch.load('./checkpoint.pth')
+
+# arch = getattr(models,checkpoint['model'])
+# model = arch(pretrained=True)
+# for params in model.parameters():
+#     params.require_grad = False
+
+# classifier = model.classifier
+# input_features = classifier.in_features
+# classifier = nn.Sequential(nn.Linear(input_features, checkpoint['hidden_layer']),
+#                            nn.ReLU(),
+#                            nn.Linear(checkpoint['hidden_layer'], 512),
+#                            nn.ReLU(),
+#                            nn.Linear(512, 102),
+#                            nn.LogSoftmax(dim=1)
+#                            )
+# model.classifier = classifier
+# model.class_to_idx = checkpoint['class_to_idx']
+# model.load_state_dict(checkpoint['state_dict'])
+# model.to("cuda")
+
+# accuracy = 0
+# for images, labels in dataloaders['valid']:
+#     images, labels = images.to('cuda'), labels.to('cuda')
+#     output = model.forward(images)
+#     predict = torch.exp(output)
+#     top_value, top_class = predict.topk(1,dim = 1)
+#     equals = top_class == labels.view(*top_class.shape)
+#     accuracy += torch.mean(equals.type(torch.FloatTensor))
+    
+# accuracy = accuracy / len(dataloaders['valid'])
+# print(accuracy)
         
