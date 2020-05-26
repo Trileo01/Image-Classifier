@@ -4,6 +4,7 @@ import json
 from torch import nn
 from torchvision import models,transforms
 from PIL import Image
+from model_loader import load_model
 
 parser = argparse.ArgumentParser(description= "Predict.py")
 parser.add_argument('img_dir', action='store')
@@ -18,21 +19,7 @@ with open('cat_to_name.json', 'r') as f:
 
 checkpoint = torch.load(args.checkpoint_dir)
 
-arch = getattr(models,checkpoint['model'])
-model = arch(pretrained=True)
-for params in model.parameters():
-    params.require_grad = False
-
-classifier = model.classifier
-input_features = classifier.in_features
-classifier = nn.Sequential(nn.Linear(input_features, checkpoint['hidden_layer']),
-                           nn.ReLU(),
-                           nn.Linear(checkpoint['hidden_layer'], 512),
-                           nn.ReLU(),
-                           nn.Linear(512, 102),
-                           nn.LogSoftmax(dim=1)
-                           )
-model.classifier = classifier
+model = load_model(checkpoint['model'], checkpoint['hidden_layer'])
 model.class_to_idx = checkpoint['class_to_idx']
 model.load_state_dict(checkpoint['state_dict'])
 
@@ -49,6 +36,7 @@ if args.gpu:
     model.to('cuda')
     img = img.to('cuda')
 
+model.eval()
 output = model(img)
 predict = torch.exp(output)
 top_values, top_class = predict.topk(args.topK, dim = 1)

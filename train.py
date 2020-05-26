@@ -3,11 +3,12 @@ import argparse
 from torch import nn, optim
 from torchvision import datasets, transforms, models
 from workspace_utils import active_session
+from model_loader import load_model
 
 parser = argparse.ArgumentParser(description="Train.py")
-parser.add_argument('data_dir', action='store', default='./flowers')
+parser.add_argument('data_dir', action='store')
 parser.add_argument('--save_dir', action='store', default='./', dest = 'dir')
-parser.add_argument('--arch',action='store', default='densenet121', dest='model')                    
+parser.add_argument('--arch',action='store', default='densenet', choices=['vgg','densenet'], dest='model')                    
 parser.add_argument('--learning rate', action='store', default=0.001, type=int, dest='lr')
 parser.add_argument('--hidden units', action='store', default=768, type=int, dest='hidden')
 parser.add_argument('--epochs', type=int, action='store',
@@ -48,22 +49,8 @@ dataloaders = {
     'test': torch.utils.data.DataLoader(image_datasets['test'], batch_size=32, shuffle=True)
 }
 
-arch = getattr(models, args.model)
-model = arch(pretrained=True)
-for params in model.parameters():
-    params.require_grad = False
-
-classifier = model.classifier
-input_features = classifier.in_features
-classifier = nn.Sequential(nn.Linear(input_features, args.hidden),
-                           nn.ReLU(),
-                           nn.Linear(args.hidden, 512),
-                           nn.ReLU(),
-                           nn.Linear(512, 102),
-                           nn.LogSoftmax(dim=1)
-                           )
-model.classifier = classifier
-optimizer = optim.Adam(model.classifier.parameters(), lr=args.lr)
+model = load_model(args.model, args.hidden)
+optimizer = optim.Adam(model.classifier.parameters(), lr = args.lr)
 criterion = nn.NLLLoss()
 
 if args.gpu:
@@ -113,37 +100,3 @@ checkpoint = {'model' : args.model,
               'state_dict' : model.state_dict()}
 checkpoint_dir = args.dir + '/checkpoint.pth'
 torch.save(checkpoint, checkpoint_dir)
-
-# checkpoint = torch.load('./checkpoint.pth')
-
-# arch = getattr(models,checkpoint['model'])
-# model = arch(pretrained=True)
-# for params in model.parameters():
-#     params.require_grad = False
-
-# classifier = model.classifier
-# input_features = classifier.in_features
-# classifier = nn.Sequential(nn.Linear(input_features, checkpoint['hidden_layer']),
-#                            nn.ReLU(),
-#                            nn.Linear(checkpoint['hidden_layer'], 512),
-#                            nn.ReLU(),
-#                            nn.Linear(512, 102),
-#                            nn.LogSoftmax(dim=1)
-#                            )
-# model.classifier = classifier
-# model.class_to_idx = checkpoint['class_to_idx']
-# model.load_state_dict(checkpoint['state_dict'])
-# model.to("cuda")
-
-# accuracy = 0
-# for images, labels in dataloaders['valid']:
-#     images, labels = images.to('cuda'), labels.to('cuda')
-#     output = model.forward(images)
-#     predict = torch.exp(output)
-#     top_value, top_class = predict.topk(1,dim = 1)
-#     equals = top_class == labels.view(*top_class.shape)
-#     accuracy += torch.mean(equals.type(torch.FloatTensor))
-    
-# accuracy = accuracy / len(dataloaders['valid'])
-# print(accuracy)
-        
